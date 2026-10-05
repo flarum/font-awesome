@@ -26,7 +26,8 @@ here, which copies the new assets in and tags the matching version. The workflow
 can also be run manually from the Actions tab.
 
 Do not commit to this repository by hand; changes will be overwritten on the next
-sync.
+sync. Issues are tracked centrally in
+[flarum/framework](https://github.com/flarum/framework/issues).
 
 ## Need the full package?
 

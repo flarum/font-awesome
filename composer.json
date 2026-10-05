@@ -21,7 +21,7 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/flarum/font-awesome/issues",
+        "issues": "https://github.com/flarum/framework/issues",
         "source": "https://github.com/flarum/font-awesome"
     }
 }
