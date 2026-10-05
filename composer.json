@@ -1,0 +1,27 @@
+{
+    "name": "flarum/font-awesome",
+    "description": "A slim redistribution of Font Awesome Free, containing only the CSS and web fonts Flarum needs. Auto-synced to upstream releases.",
+    "type": "library",
+    "keywords": [
+        "flarum",
+        "font-awesome",
+        "fonts",
+        "icons"
+    ],
+    "homepage": "https://fontawesome.com",
+    "license": [
+        "CC-BY-4.0",
+        "OFL-1.1",
+        "MIT"
+    ],
+    "authors": [
+        {
+            "name": "Fonticons, Inc.",
+            "homepage": "https://fontawesome.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/flarum/font-awesome/issues",
+        "source": "https://github.com/flarum/font-awesome"
+    }
+}

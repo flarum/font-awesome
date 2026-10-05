@@ -1,0 +1,5 @@
+# Keep the Composer dist to the assets only.
+/.github       export-ignore
+/.gitattributes export-ignore
+/.gitignore    export-ignore
+/README.md     export-ignore
