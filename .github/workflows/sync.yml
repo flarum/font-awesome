@@ -1,0 +1,103 @@
+name: Sync from upstream
+
+# Copies the css/ and webfonts/ directories from a Font Awesome Free release
+# into this repository and tags the matching version. Driven by a scheduled
+# check in flarum/framework (via repository_dispatch) so it keeps firing even
+# when this quiet repo would otherwise have its own schedule disabled for
+# inactivity; can also be run by hand.
+
+on:
+  repository_dispatch:
+    types: [upstream-release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Upstream version to sync (e.g. 7.3.1). Leave blank for the latest release.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve target version
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DISPATCH_VERSION: ${{ github.event.client_payload.version }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          version="${DISPATCH_VERSION:-${INPUT_VERSION:-}}"
+          if [ -z "$version" ]; then
+            version="$(gh api repos/FortAwesome/Font-Awesome/releases/latest --jq .tag_name)"
+          fi
+          # Strip any leading v, just in case.
+          version="${version#v}"
+          echo "Target version: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Download and extract the web release
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          url="https://github.com/FortAwesome/Font-Awesome/releases/download/${VERSION}/fontawesome-free-${VERSION}-web.zip"
+          echo "Downloading $url"
+          curl -fSL "$url" -o fa-web.zip
+          unzip -q fa-web.zip
+          src="fontawesome-free-${VERSION}-web"
+          test -d "$src/css" && test -d "$src/webfonts" || { echo "::error::Unexpected archive layout"; exit 1; }
+          # Replace tracked assets wholesale so removed upstream files don't linger.
+          rm -rf css webfonts
+          cp -R "$src/css" css
+          cp -R "$src/webfonts" webfonts
+          cp "$src/LICENSE.txt" LICENSE.txt
+          rm -rf "$src" fa-web.zip
+
+      - name: Commit if changed
+        id: commit
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name 'flarum-bot'
+          git config user.email 'bot@flarum.org'
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes; already in sync with $VERSION."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "chore: sync Font Awesome Free $VERSION"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Tag the release
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION already exists; not retagging."
+            exit 0
+          fi
+          git tag "$VERSION"
+          git push origin "$VERSION"
+          echo "Tagged $VERSION."
